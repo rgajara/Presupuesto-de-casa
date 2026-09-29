@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Presupuesto del Hogar</title>
+  <style>
+:root {
+  --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7280;
+  --line: #e3e6eb; --input: #fff8e1; --accent: #1F3864;
+  font-family: Arial, Helvetica, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+header {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;
+  padding: 20px 16px; background: var(--accent); color: #fff;
+}
+header h1 { margin: 0; font-size: 1.4rem; }
+header p { margin: 4px 0 0; opacity: .8; font-size: .85rem; }
+header p.hoy { opacity: 1; font-size: .95rem; margin-top: 8px; }
+header p.hoy strong { background: #ffffff1f; padding: 2px 8px; border-radius: 6px; }
+.acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.acciones label { font-size: .85rem; display: flex; gap: 6px; align-items: center; }
+button, input[type=month] {
+  font: inherit; font-size: .85rem; border-radius: 8px; border: 1px solid #ffffff55;
+  padding: 7px 12px; background: #ffffff1a; color: #fff; cursor: pointer;
+}
+input[type=month] { color-scheme: dark; }
+button.peligro { background: #c00000; border-color: #c00000; }
+
+nav { display: flex; gap: 4px; overflow-x: auto; padding: 12px 16px 0; background: var(--card); border-bottom: 1px solid var(--line); }
+nav button {
+  background: none; border: none; color: var(--muted); border-bottom: 3px solid transparent;
+  border-radius: 0; padding: 10px 14px; white-space: nowrap;
+}
+nav button[aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
+
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+.card h3 { margin: 0; padding: 12px 14px; font-size: 1rem; color: var(--c); border-left: 5px solid var(--c); }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th, td { padding: 8px 10px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+thead th { background: var(--c); color: #fff; font-weight: bold; font-size: .8rem; }
+tfoot td { background: #e2efda; font-weight: bold; }
+.num { text-align: right; white-space: nowrap; }
+.strong { font-weight: bold; }
+.muted { color: var(--muted); }
+td small { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+
+.edit input {
+  width: 110px; font: inherit; padding: 6px 8px; border: 1px solid #e5c76b; border-radius: 6px;
+  background: var(--input); color: #0000c0; text-align: right;
+}
+.edit input.corto { width: 64px; }
+.edit input:focus { outline: 2px solid var(--accent); }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--c, var(--accent)); border-radius: 12px; padding: 14px; }
+.kpi span { display: block; font-size: .8rem; color: var(--muted); }
+.kpi strong { font-size: 1.35rem; }
+.kpi.total { background: var(--accent); color: #fff; border-color: var(--accent); margin-bottom: 16px; }
+.kpi.total span { color: #ffffffcc; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; margin-top: 8px; }
+.bar i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+.dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+.ayuda { color: var(--muted); font-size: .9rem; }
+
+@media (max-width: 520px) { .dos { grid-template-columns: 1fr; } }
+
+/* Botón + y gastos nuevos */
+header p.hoy { display: flex; align-items: center; gap: 8px; }
+button.mas {
+  width: 32px; height: 32px; padding: 0; border-radius: 50%; font-size: 1.3rem; line-height: 1;
+  background: #fff; color: var(--accent); border: none; font-weight: bold;
+}
+button.mas:hover { background: #ffe082; }
+tr.propio td { background: #f3f8ff; }
+.etq { font-size: .7rem; background: #1F3864; color: #fff; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+button.borrar {
+  background: none; border: 1px solid var(--line); color: #c00000; border-radius: 6px;
+  width: 28px; height: 28px; padding: 0; font-size: 1.1rem;
+}
+button.borrar:hover { background: #fdecea; }
+
+dialog { border: none; border-radius: 14px; padding: 0; width: min(520px, calc(100% - 32px)); box-shadow: 0 10px 40px #0004; }
+dialog::backdrop { background: #0006; }
+dialog form { padding: 20px; display: grid; gap: 12px; }
+dialog h2 { margin: 0 0 4px; font-size: 1.15rem; color: var(--accent); }
+dialog label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+dialog input, dialog select {
+  font: inherit; font-size: .95rem; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: #fff;
+}
+dialog .fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+dialog .botones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+dialog button.pri { background: var(--accent); color: #fff; border: none; }
+dialog button.sec { background: #fff; color: var(--text); border: 1px solid var(--line); }
+[hidden] { display: none !important; }
+@media print {
+  header .acciones, nav { display: none; }
+  header { background: none; color: #000; }
+  .card { break-inside: avoid; }
+}
+@media print { button.mas, button.borrar { display:none; } }
+dialog input, dialog select { width: 100%; min-width: 0; }
+
+/* ================= Adaptación por dispositivo ================= */
+.nom-corto { display: none; }
+.disp { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 10px; background: #ffffff26; font-size: .75rem; opacity: 1; }
+nav { position: sticky; top: 0; z-index: 5; }
+header { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+
+/* ---------- iPad / tablet ---------- */
+html[data-dispositivo="ipad"] body { font-size: 17px; }
+html[data-dispositivo="ipad"] main { padding: 20px 24px; }
+html[data-dispositivo="ipad"] button,
+html[data-dispositivo="ipad"] input[type=month] { min-height: 44px; font-size: .95rem; padding: 10px 16px; }
+html[data-dispositivo="ipad"] nav button { padding: 14px 18px; font-size: 1rem; }
+html[data-dispositivo="ipad"] .edit input { font-size: 16px; min-height: 44px; width: 130px; }
+html[data-dispositivo="ipad"] .edit input.corto { width: 80px; }
+html[data-dispositivo="ipad"] button.mas { width: 44px; height: 44px; font-size: 1.6rem; }
+html[data-dispositivo="ipad"] button.borrar { width: 40px; height: 40px; }
+html[data-dispositivo="ipad"] th, html[data-dispositivo="ipad"] td { padding: 11px 12px; }
+html[data-dispositivo="ipad"] .kpis { grid-template-columns: repeat(2, 1fr); }
+html[data-dispositivo="ipad"] .kpis .kpi.total { grid-column: 1 / -1; }
+html[data-dispositivo="ipad"] .dos { grid-template-columns: 1fr; }
+html[data-dispositivo="ipad"] dialog input, html[data-dispositivo="ipad"] dialog select { font-size: 16px; min-height: 44px; }
+@media (orientation: landscape) and (min-width: 1000px) {
+  html[data-dispositivo="ipad"] .dos { grid-template-columns: 1fr 1fr; }
+  html[data-dispositivo="ipad"] .kpis { grid-template-columns: repeat(4, 1fr); }
+  html[data-dispositivo="ipad"] .kpis .kpi.total { grid-column: auto; }
+}
+
+/* ---------- Celular ---------- */
+html[data-dispositivo="celular"] header { flex-direction: column; align-items: stretch; padding-top: max(16px, env(safe-area-inset-top)); }
+html[data-dispositivo="celular"] header h1 { font-size: 1.2rem; }
+html[data-dispositivo="celular"] .acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+html[data-dispositivo="celular"] .acciones label { grid-column: 1 / -1; }
+html[data-dispositivo="celular"] .acciones label input { flex: 1; }
+html[data-dispositivo="celular"] .acciones button { min-height: 44px; }
+html[data-dispositivo="celular"] #reiniciar { grid-column: 1 / -1; }
+html[data-dispositivo="celular"] button.mas { width: 40px; height: 40px; font-size: 1.5rem; }
+html[data-dispositivo="celular"] nav { padding: 6px 8px 0; }
+html[data-dispositivo="celular"] nav button { padding: 12px 12px; font-size: .9rem; }
+html[data-dispositivo="celular"] main { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
+html[data-dispositivo="celular"] .kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+html[data-dispositivo="celular"] .kpis .kpi.total { grid-column: 1 / -1; }
+html[data-dispositivo="celular"] .kpi { padding: 10px; }
+html[data-dispositivo="celular"] .kpi strong { font-size: 1.1rem; }
+html[data-dispositivo="celular"] .dos { grid-template-columns: 1fr; }
+/* Tablas de resumen: nombres cortos y sin columna % */
+html[data-dispositivo="celular"] .nom-largo { display: none; }
+html[data-dispositivo="celular"] .nom-corto { display: inline; }
+html[data-dispositivo="celular"] .pct { display: none; }
+html[data-dispositivo="celular"] table { font-size: .82rem; }
+html[data-dispositivo="celular"] th, html[data-dispositivo="celular"] td { padding: 8px 6px; }
+/* Tablas para editar: cada gasto se convierte en una tarjeta */
+html[data-dispositivo="celular"] table.edit thead { display: none; }
+html[data-dispositivo="celular"] table.edit, html[data-dispositivo="celular"] table.edit tbody,
+html[data-dispositivo="celular"] table.edit tfoot { display: block; }
+html[data-dispositivo="celular"] table.edit tbody tr {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 12px; border-top: 1px solid var(--line);
+}
+html[data-dispositivo="celular"] table.edit tbody td { border: none; padding: 0; }
+html[data-dispositivo="celular"] table.edit td.c-cat { grid-column: 1 / -1; font-size: .75rem; color: var(--muted); }
+html[data-dispositivo="celular"] table.edit td.c-cat:empty { display: none; }
+html[data-dispositivo="celular"] table.edit td.c-con { grid-column: 1 / -1; font-size: .95rem; font-weight: bold; }
+html[data-dispositivo="celular"] table.edit td[data-label]::before {
+  content: attr(data-label); display: block; font-size: .7rem; color: var(--muted); font-weight: normal; margin-bottom: 2px;
+}
+html[data-dispositivo="celular"] table.edit td.c-frec { grid-column: 1 / -1; }
+html[data-dispositivo="celular"] table.edit td.c-frec::before { display: inline; margin-right: 4px; }
+html[data-dispositivo="celular"] table.edit input { width: 100%; font-size: 16px; min-height: 44px; }
+html[data-dispositivo="celular"] table.edit td.c-tot { text-align: left; font-size: 1rem; align-self: center; }
+html[data-dispositivo="celular"] table.edit td.c-del { justify-self: end; align-self: center; }
+html[data-dispositivo="celular"] table.edit td.c-del:empty { display: none; }
+html[data-dispositivo="celular"] table.edit button.borrar { width: 40px; height: 40px; }
+html[data-dispositivo="celular"] table.edit tfoot tr { display: flex; justify-content: space-between; }
+html[data-dispositivo="celular"] table.edit tfoot td { border: none; padding: 12px; }
+html[data-dispositivo="celular"] table.edit tfoot td:last-child { display: none; }
+/* Formulario "+" como panel que sube desde abajo */
+html[data-dispositivo="celular"] dialog {
+  width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 16px 16px 0 0; max-height: 92vh;
+}
+html[data-dispositivo="celular"] dialog form { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+html[data-dispositivo="celular"] dialog input, html[data-dispositivo="celular"] dialog select { font-size: 16px; min-height: 44px; }
+html[data-dispositivo="celular"] dialog .botones button { flex: 1; min-height: 44px; }
+html[data-dispositivo="celular"] table.edit td.c-cat.igual { display: none; }
+
+/* Botón "+ Agregar un tipo de gasto" en forma de burbuja */
+button.mas, html[data-dispositivo] button.mas {
+  width: auto; height: auto; min-height: 34px; padding: 6px 14px 6px 8px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; font-weight: bold; white-space: nowrap;
+}
+button.mas .signo {
+  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--accent); color: #fff; font-size: 1.1rem; line-height: 1;
+}
+html[data-dispositivo="ipad"] button.mas, html[data-dispositivo="celular"] button.mas { min-height: 44px; font-size: 1rem; padding: 8px 16px 8px 10px; }
+html[data-dispositivo="ipad"] button.mas .signo, html[data-dispositivo="celular"] button.mas .signo { width: 26px; height: 26px; font-size: 1.25rem; }
+html[data-dispositivo="celular"] header p.hoy { flex-wrap: wrap; }
+
+.sync { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: .75rem; background: #ffffff26; color: #fff; }
+.sync::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: #c9cdd6; vertical-align: 1px; }
+.sync[data-estado="ok"]::before { background: #6fdc8c; }
+.sync[data-estado="guardando"]::before { background: #ffd166; }
+.sync[data-estado="error"]::before { background: #ff6b6b; }
+
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Presupuesto mensual del hogar</h1>
+            <p class="hoy">
+        Hoy: <strong id="hoy"></strong>
+        <button id="agregar" type="button" class="mas" title="Agregar un gasto nuevo" aria-label="Agregar un tipo de gasto"><span class="signo">+</span> Agregar un tipo de gasto</button>
+        <span id="dispositivo" class="disp"></span>
+        <span id="sync" class="sync" role="status" aria-live="polite">Cargando…</span>
+      </p>
+    </div>
+    <div class="acciones">
+      <label>Mes <input type="month" id="mes"></label>
+      <button id="exportar" type="button">Exportar CSV</button>
+      <button id="imprimir" type="button">Imprimir</button>
+      <button id="reiniciar" type="button" class="peligro">Nuevo mes</button>
+    </div>
+  </header>
+  <nav id="tabs" role="tablist"></nav>
+  <main id="contenido"></main>
+
+  <dialog id="dialogo-nuevo" aria-labelledby="titulo-nuevo">
+    <form id="form-nuevo">
+      <h2 id="titulo-nuevo">Agregar un gasto nuevo</h2>
+      <label>¿De quién es el gasto?
+        <select name="persona">
+          <option value="ambos">De los dos</option>
+          <option value="mla">Maria Luisa Aguilar</option>
+          <option value="jcs">Juan Carlos Sugajara</option>
+        </select>
+      </label>
+      <label>Tipo de gasto
+        <select name="tipo">
+          <option value="fijo">Gasto fijo</option>
+          <option value="otro">Otro gasto mensual</option>
+          <option value="innecesario">Gasto innecesario</option>
+        </select>
+      </label>
+      <label>Categoría
+        <select name="categoria"></select>
+      </label>
+      <label class="nueva-cat" hidden>Nombre de la nueva categoría
+        <input name="nuevaCategoria" type="text" placeholder="Ej. Mascotas">
+      </label>
+      <label>Nombre del gasto
+        <input name="concepto" type="text" required placeholder="Ej. YouTube Premium">
+      </label>
+      <div class="fila">
+        <label>Frecuencia
+          <select name="frecuencia">
+            <option>Mensual</option>
+            <option>Semanal</option>
+            <option>Por vez</option>
+            <option>Por clase</option>
+            <option>Por viaje</option>
+            <option>Mensual (prorrateado)</option>
+          </select>
+        </label>
+        <label>Monto por pago (S/)
+          <input name="monto" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </label>
+        <label>Pagos al mes
+          <input name="veces" type="number" min="0" step="1" value="1" inputmode="numeric">
+        </label>
+      </div>
+      <label>Nota (opcional)
+        <input name="nota" type="text" placeholder="Ej. Se paga el día 15">
+      </label>
+      <div class="botones">
+        <button type="button" id="cancelar" class="sec">Cancelar</button>
+        <button type="submit" class="pri">Agregar gasto</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script>
+// Estructura del presupuesto: edita aquí para agregar o quitar gastos.
+// tipo: "fijo" | "otro" | "innecesario"
+// veces: valor inicial de "Pagos al mes" (1 = mensual, 0 = se llena según uso)
+const PERSONAS = [
+  { id: "mla", nombre: "Maria Luisa Aguilar", carro: "Volkswagen Tiguan" },
+  { id: "jcs", nombre: "Juan Carlos Sugajara", carro: "Audi S3" },
+];
+
+const CARROS = ["Volkswagen Tiguan", "Audi S3"];
+
+const TIPOS = {
+  fijo: { titulo: "Gastos fijos", color: "#1F3864" },
+  otro: { titulo: "Otros gastos mensuales", color: "#548235" },
+  innecesario: { titulo: "Gastos innecesarios", color: "#C00000" },
+};
+
+const SUS = "Suscripciones contratadas";
+
+const GASTOS = [
+  // ---- FIJOS ----
+  ["Alquiler o hipoteca", "Alquiler o hipoteca", "fijo", "Mensual", 1],
+  ["Mantenimiento edificio/condominio", "Mantenimiento del edificio / condominio", "fijo", "Mensual", 1],
+  ["Internet", "Internet del hogar", "fijo", "Mensual", 1],
+  ["Seguro de vivienda", "Seguro de vivienda", "fijo", "Mensual", 1],
+  ["Impuestos de la vivienda", "Impuesto predial", "fijo", "Mensual (prorrateado)", 1, "Si es trimestral o anual, ingresa el equivalente mensual"],
+  ["Impuestos de la vivienda", "Arbitrios municipales", "fijo", "Mensual (prorrateado)", 1],
+  ["Colegiaturas / mensualidades", "Colegiatura / mensualidad 1", "fijo", "Mensual", 1],
+  ["Colegiaturas / mensualidades", "Colegiatura / mensualidad 2", "fijo", "Mensual", 1],
+  ["Pago de préstamos", "Préstamo 1", "fijo", "Mensual", 1],
+  ["Pago de préstamos", "Préstamo 2", "fijo", "Mensual", 1],
+  [SUS, "Netflix", "fijo", "Mensual", 1],
+  [SUS, "Disney+", "fijo", "Mensual", 1],
+  [SUS, "Amazon Prime", "fijo", "Mensual", 1, "Incluye Prime Video"],
+  [SUS, "HBO (Max)", "fijo", "Mensual", 1],
+  [SUS, "DirecTV", "fijo", "Mensual", 1],
+  [SUS, "Apple TV", "fijo", "Mensual", 1],
+  [SUS, "Apple Music", "fijo", "Mensual", 1],
+  [SUS, "Apple One", "fijo", "Mensual", 1, "Incluye Apple Music/TV: no contar doble"],
+  [SUS, "Microsoft Office (365)", "fijo", "Mensual", 1],
+  [SUS, "Spotify", "fijo", "Mensual", 1],
+  [SUS, "Otra suscripción", "fijo", "Mensual", 1],
+  // ---- OTROS ----
+  ["Comida", "Semana 1", "otro", "Semanal", 1],
+  ["Comida", "Semana 2", "otro", "Semanal", 1],
+  ["Comida", "Semana 3", "otro", "Semanal", 1],
+  ["Comida", "Semana 4", "otro", "Semanal", 1],
+  ["Comida", "Semana 5", "otro", "Semanal", 0, "Pon 1 solo si el mes tiene 5 semanas"],
+  ["Electricidad", "Recibo de luz", "otro", "Mensual", 1],
+  ["Agua", "Recibo de agua", "otro", "Mensual", 1],
+  ["Línea celular", "Plan de celular", "otro", "Mensual", 1],
+  ["Otros impuestos", "Impuesto vehicular", "otro", "Mensual (prorrateado)", 1],
+  ["Otros impuestos", "Otros impuestos", "otro", "Mensual", 1],
+  ["Seguros", "Seguro de salud / EPS", "otro", "Mensual", 1],
+  ["Seguros", "Seguro vehicular - Volkswagen Tiguan", "otro", "Mensual", 1],
+  ["Seguros", "Seguro vehicular - Audi S3", "otro", "Mensual", 1],
+  ["Seguros", "Seguro de vida", "otro", "Mensual", 1],
+  ["Seguros", "SOAT (prorrateado)", "otro", "Mensual (prorrateado)", 1, "Costo anual ÷ 12"],
+  ["Tarjetas de crédito", "Tarjeta 1", "otro", "Mensual", 1],
+  ["Tarjetas de crédito", "Tarjeta 2", "otro", "Mensual", 1],
+  ["Tarjetas de crédito", "Tarjeta 3", "otro", "Mensual", 1],
+  ["Transporte", "Taxis", "otro", "Por viaje", 0, "Monto por viaje × viajes al mes"],
+  ["Transporte", "Gasolina - Volkswagen Tiguan", "otro", "Por tanqueada", 0, "Monto por tanqueada × tanqueadas al mes"],
+  ["Transporte", "Gasolina - Audi S3", "otro", "Por tanqueada", 0, "Monto por tanqueada × tanqueadas al mes"],
+  ["Citas médicas", "Consulta médica general", "otro", "Por cita", 0],
+  ["Citas médicas", "Consulta con especialista", "otro", "Por cita", 0],
+  ["Citas médicas", "Dentista", "otro", "Por cita", 0],
+  ["Citas médicas", "Exámenes / laboratorio", "otro", "Por cita", 0],
+  ["Deudas pendientes", "Deuda 1", "otro", "Mensual", 1],
+  ["Deudas pendientes", "Deuda 2", "otro", "Mensual", 1],
+  ["Deudas pendientes", "Deuda 3", "otro", "Mensual", 1],
+  // ---- INNECESARIOS ----
+  ["Restaurantes", "Comer frecuentemente en restaurantes", "innecesario", "Por salida", 0],
+  ["Delivery", "Pedir delivery", "innecesario", "Por pedido", 0],
+  ["Ropa", "Comprar ropa que no se necesita", "innecesario", "Mensual", 1],
+  ["Videojuegos", "Comprar videojuegos o skins", "innecesario", "Mensual", 1],
+  ["Suscripciones poco usadas", "Suscripciones que casi no se utilizan", "innecesario", "Mensual", 1, "No repetir las ya anotadas arriba"],
+  ["Compras impulsivas", "Compras impulsivas", "innecesario", "Mensual", 1],
+  ["Snacks y bebidas", "Snacks y bebidas comprados fuera de casa", "innecesario", "Por compra", 0],
+  ["Decoraciones", "Decoraciones innecesarias", "innecesario", "Mensual", 1],
+  ["Taxis evitables", "Taxis cuando se podría usar transporte público", "innecesario", "Por viaje", 0, "Solo los evitables"],
+  ["Marcas caras", "Marcas más caras cuando existe una alternativa similar", "innecesario", "Mensual", 1, "Diferencia de precio vs. la alternativa"],
+  ["Entretenimiento excesivo", "Entretenimiento excesivo (cine, conciertos, etc.)", "innecesario", "Mensual", 1],
+  ["Clases particulares", "Matemáticas — Prof. Renzo Pino", "innecesario", "Por clase", 0, "Monto por clase × clases al mes"],
+  ["Clases particulares", "Español — Prof. Fanny Groisman", "innecesario", "Por clase", 0, "Monto por clase × clases al mes"],
+  ["Clases particulares", "ESS — Prof. Andrés Agurto", "innecesario", "Por clase", 0, "Monto por clase × clases al mes"],
+  ["Clases particulares", "Business — Prof. Gianni Apache", "innecesario", "Por clase", 0, "Monto por clase × clases al mes"],
+].map(([categoria, concepto, tipo, frecuencia, veces, nota = ""], i) => ({
+  id: "g" + i, categoria, concepto, tipo, frecuencia, veces, nota,
+}));
+
+// Un gasto de carro solo aparece en la cuenta de su dueño
+function gastosDe(persona) {
+  return GASTOS.filter((g) => {
+    const carro = CARROS.find((c) => g.concepto.includes(c));
+    return !carro || carro === persona.carro;
+  });
+}
+
+</script>
+  <script>
+const STORAGE_KEY = "presupuesto-casa-v1";
+const soles = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" });
+const pct = (v, t) => (t > 0 ? ((v / t) * 100).toFixed(1) + "%" : "-");
+const fmt = (v) => (v ? soles.format(v) : "-");
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ---------- Estado (se guarda en el navegador) ----------
+// estado.extra = gastos agregados desde el botón "+" (sin tocar el código)
+function estadoInicial(extra = []) {
+  const e = { mes: new Date().toISOString().slice(0, 7), datos: {}, extra };
+  PERSONAS.forEach((p) => (e.datos[p.id] = {}));
+  asegurarDatos(e);
+  return e;
+}
+function asegurarDatos(e) {
+  PERSONAS.forEach((p) => {
+    e.datos[p.id] = e.datos[p.id] || {};
+    listaDe(p, e).forEach((g) => { if (!e.datos[p.id][g.id]) e.datos[p.id][g.id] = { monto: 0, veces: g.veces }; });
+  });
+}
+function cargar() {
+  try {
+    const g = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (g) {
+      const e = { mes: g.mes || new Date().toISOString().slice(0, 7), datos: g.datos || {}, extra: g.extra || [] };
+      asegurarDatos(e);
+      return e;
+    }
+  } catch (_) {}
+  return estadoInicial();
+}
+function guardar() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); } catch (_) {}
+  if (typeof programarSync === "function") programarSync();
+}
+
+// ---------- Listas de gastos ----------
+const todos = (e = estado) => [...GASTOS, ...(e?.extra || [])];
+function listaDe(p, e = estado) {
+  const base = gastosDe(p);
+  const extra = (e?.extra || []).filter((g) => g.personas.includes(p.id));
+  // Cada gasto nuevo se muestra junto a los de su misma categoría y tipo
+  const out = [...base];
+  extra.forEach((g) => {
+    let idx = -1;
+    out.forEach((x, i) => { if (x.tipo === g.tipo && x.categoria === g.categoria) idx = i; });
+    if (idx < 0) out.forEach((x, i) => { if (x.tipo === g.tipo) idx = i; });
+    out.splice(idx + 1, 0, g);
+  });
+  return out;
+}
+let estado = cargar();
+
+// ---------- Cálculos ----------
+const total = (pid, gid) => {
+  const d = estado.datos[pid]?.[gid];
+  return d ? (Number(d.monto) || 0) * (Number(d.veces) || 0) : 0;
+};
+const sumar = (pid, filtro) => todos().filter(filtro).reduce((s, g) => s + total(pid, g.id), 0);
+const porPersona = (filtro) => PERSONAS.map((p) => sumar(p.id, filtro));
+const categoriasDe = (tipo) => {
+  const cats = [];
+  PERSONAS.forEach((p) => listaDe(p).forEach((g) => { if (g.tipo === tipo && !cats.includes(g.categoria)) cats.push(g.categoria); }));
+  return cats;
+};
+
+// ---------- Tablas ----------
+function tablaResumen(titulo, color, filas) {
+  const vals = filas.map((f) => porPersona(f.filtro));
+  const tot = PERSONAS.map((_, i) => vals.reduce((s, v) => s + v[i], 0));
+  const totH = tot.reduce((a, b) => a + b, 0);
+  const cuerpo = filas.map((f, k) => {
+    const h = vals[k].reduce((a, b) => a + b, 0);
+    return `<tr><td>${f.etiqueta}</td>${vals[k].map((v) => `<td class="num">${fmt(v)}</td>`).join("")}
+      <td class="num strong">${fmt(h)}</td><td class="num muted pct">${pct(h, totH)}</td></tr>`;
+  }).join("");
+  return `
+  <section class="card">
+    <h3 style="--c:${color}">${titulo}</h3>
+    <div class="scroll"><table>
+      <thead style="--c:${color}"><tr><th>Concepto</th>${PERSONAS.map((p) => `<th><span class="nom-largo">${p.nombre}</span><span class="nom-corto">${p.nombre.split(" ")[0]}</span></th>`).join("")}<th>Total<span class="nom-largo"> hogar</span></th><th class="pct">%</th></tr></thead>
+      <tbody>${cuerpo}</tbody>
+      <tfoot><tr><td>Total</td>${tot.map((v) => `<td class="num">${fmt(v)}</td>`).join("")}<td class="num">${fmt(totH)}</td><td class="num pct">${totH ? "100%" : "-"}</td></tr></tfoot>
+    </table></div>
+  </section>`;
+}
+
+// ---------- Vistas ----------
+function vistaResumen() {
+  const tipos = Object.keys(TIPOS);
+  const totales = tipos.map((t) => porPersona((g) => g.tipo === t).reduce((a, b) => a + b, 0));
+  const totalHogar = totales.reduce((a, b) => a + b, 0);
+  const kpis = tipos.map((t, i) => `
+    <div class="kpi" style="--c:${TIPOS[t].color}">
+      <span>${TIPOS[t].titulo.split(" (")[0]}</span><strong>${soles.format(totales[i])}</strong>
+      <div class="bar"><i style="width:${totalHogar ? (totales[i] / totalHogar) * 100 : 0}%"></i></div>
+    </div>`).join("");
+
+  let html = `<div class="kpis">
+      <div class="kpi total"><span>Total mensual del hogar</span><strong>${soles.format(totalHogar)}</strong></div>
+      ${kpis}</div>`;
+  html += tablaResumen("Por tipo de gasto", "#1F3864",
+    tipos.map((t) => ({ etiqueta: TIPOS[t].titulo.split(" (")[0], filtro: (g) => g.tipo === t })));
+  tipos.forEach((t) => {
+    html += tablaResumen(TIPOS[t].titulo, TIPOS[t].color,
+      categoriasDe(t).map((c) => ({ etiqueta: esc(c), filtro: (g) => g.categoria === c && g.tipo === t })));
+  });
+  html += tablaResumen("Gasolina por carro", "#7F6000", CARROS.map((c) => {
+    const d = PERSONAS.find((p) => p.carro === c);
+    return { etiqueta: `${c} (${d.nombre.split(" ").slice(0, 2).join(" ")})`, filtro: (g) => g.concepto === `Gasolina - ${c}` };
+  }));
+  return html;
+}
+
+function vistaComparacion() {
+  const lado = (tipo) => tablaResumen(TIPOS[tipo].titulo, TIPOS[tipo].color,
+    todos().filter((g) => g.tipo === tipo).map((g) => ({
+      etiqueta: g.categoria === g.concepto ? esc(g.concepto) : `<span class="muted">${esc(g.categoria)} ·</span> ${esc(g.concepto)}`,
+      filtro: (x) => x.id === g.id,
+    })));
+  return `<div class="dos">${lado("fijo")}${lado("innecesario")}</div>`;
+}
+
+function vistaPersona(p) {
+  const secciones = Object.keys(TIPOS).map((t) => {
+    const lista = listaDe(p).filter((g) => g.tipo === t);
+    let prev = null;
+    const filas = lista.map((g) => {
+      const d = estado.datos[p.id][g.id];
+      const cat = g.categoria !== prev ? `<strong>${esc(g.categoria)}</strong>` : ""; prev = g.categoria;
+      const borrar = g.propio ? `<button type="button" class="borrar" data-borrar="${g.id}" title="Eliminar este gasto" aria-label="Eliminar ${esc(g.concepto)}">×</button>` : "";
+      return `<tr${g.propio ? ' class="propio"' : ""}>
+        <td class="c-cat${g.categoria === g.concepto ? " igual" : ""}">${cat}</td><td class="c-con">${esc(g.concepto)}${g.propio ? ' <span class="etq">nuevo</span>' : ""}${g.nota ? `<small>${esc(g.nota)}</small>` : ""}</td>
+        <td class="muted c-frec" data-label="Frecuencia">${esc(g.frecuencia)}</td>
+        <td data-label="Monto (S/)"><input type="number" min="0" step="0.01" inputmode="decimal" data-p="${p.id}" data-g="${g.id}" data-k="monto" value="${d.monto || ""}" placeholder="0.00" aria-label="Monto ${esc(g.concepto)}"></td>
+        <td data-label="Veces al mes"><input type="number" min="0" step="1" inputmode="numeric" class="corto" data-p="${p.id}" data-g="${g.id}" data-k="veces" value="${d.veces}" aria-label="Pagos al mes ${esc(g.concepto)}"></td>
+        <td class="num strong c-tot" data-label="Total" id="t-${p.id}-${g.id}">${fmt(total(p.id, g.id))}</td>
+        <td class="c-del">${borrar}</td></tr>`;
+    }).join("");
+    const sub = sumar(p.id, (g) => g.tipo === t);
+    return `<section class="card">
+      <h3 style="--c:${TIPOS[t].color}">${TIPOS[t].titulo}</h3>
+      <div class="scroll"><table class="edit">
+        <thead style="--c:${TIPOS[t].color}"><tr><th>Categoría</th><th>Concepto</th><th>Frecuencia</th><th>Monto por pago (S/)</th><th>Pagos al mes</th><th>Total mensual</th><th></th></tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr><td colspan="5" class="c-sub">Subtotal ${TIPOS[t].titulo.split(" (")[0].toLowerCase()}</td><td class="num" id="s-${p.id}-${t}">${fmt(sub)}</td><td></td></tr></tfoot>
+      </table></div></section>`;
+  }).join("");
+  return `${secciones}
+    <div class="kpi total"><span>Total mensual — ${p.nombre}</span><strong id="tt-${p.id}">${soles.format(sumar(p.id, () => true))}</strong></div>`;
+}
+
+// ---------- Navegación ----------
+const VISTAS = [
+  { id: "resumen", nombre: "Resumen", render: vistaResumen },
+  { id: "comparacion", nombre: "Fijos vs Innecesarios", render: vistaComparacion },
+  ...PERSONAS.map((p) => ({ id: p.id, nombre: p.nombre, render: () => vistaPersona(p) })),
+];
+let vistaActual = "resumen";
+
+function render() {
+  document.getElementById("tabs").innerHTML = VISTAS.map((v) =>
+    `<button role="tab" aria-selected="${v.id === vistaActual}" data-vista="${v.id}">${v.nombre}</button>`).join("");
+  document.getElementById("contenido").innerHTML = VISTAS.find((v) => v.id === vistaActual).render();
+  document.getElementById("mes").value = estado.mes;
+}
+
+function actualizarPersona(pid) {
+  const p = PERSONAS.find((x) => x.id === pid);
+  listaDe(p).forEach((g) => { const c = document.getElementById(`t-${pid}-${g.id}`); if (c) c.textContent = fmt(total(pid, g.id)); });
+  Object.keys(TIPOS).forEach((t) => { const c = document.getElementById(`s-${pid}-${t}`); if (c) c.textContent = fmt(sumar(pid, (g) => g.tipo === t)); });
+  const tt = document.getElementById(`tt-${pid}`); if (tt) tt.textContent = soles.format(sumar(pid, () => true));
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-vista]");
+  if (b) { vistaActual = b.dataset.vista; render(); window.scrollTo({ top: 0 }); return; }
+  const del = e.target.closest("[data-borrar]");
+  if (del) {
+    const g = estado.extra.find((x) => x.id === del.dataset.borrar);
+    if (g && confirm(`¿Eliminar "${g.concepto}"? Se borra para las dos personas en las que aparece.`)) {
+      estado.extra = estado.extra.filter((x) => x.id !== g.id);
+      PERSONAS.forEach((p) => delete estado.datos[p.id][g.id]);
+      guardar(); render();
+    }
+  }
+});
+document.addEventListener("input", (e) => {
+  const i = e.target;
+  if (i.dataset.g) {
+    estado.datos[i.dataset.p][i.dataset.g][i.dataset.k] = Math.max(0, Number(i.value) || 0);
+    guardar(); actualizarPersona(i.dataset.p);
+  } else if (i.id === "mes") { estado.mes = i.value; guardar(); }
+});
+
+// ---------- Botón "+": agregar un gasto nuevo ----------
+const dialogo = document.getElementById("dialogo-nuevo");
+const form = document.getElementById("form-nuevo");
+
+function llenarCategorias() {
+  const tipo = form.tipo.value;
+  const sel = form.categoria;
+  sel.innerHTML = categoriasDe(tipo).map((c) => `<option>${esc(c)}</option>`).join("") +
+    `<option value="__nueva">+ Nueva categoría…</option>`;
+  form.querySelector(".nueva-cat").hidden = sel.value !== "__nueva";
+}
+document.getElementById("agregar").addEventListener("click", () => {
+  form.reset();
+  const actual = PERSONAS.find((p) => p.id === vistaActual);
+  form.persona.value = actual ? actual.id : "ambos";
+  llenarCategorias();
+  dialogo.showModal();
+  form.concepto.focus();
+});
+form.tipo.addEventListener("change", llenarCategorias);
+form.categoria.addEventListener("change", () => {
+  const nueva = form.categoria.value === "__nueva";
+  form.querySelector(".nueva-cat").hidden = !nueva;
+  if (nueva) form.nuevaCategoria.focus();
+});
+document.getElementById("cancelar").addEventListener("click", () => dialogo.close());
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const categoria = form.categoria.value === "__nueva" ? form.nuevaCategoria.value.trim() : form.categoria.value;
+  const concepto = form.concepto.value.trim();
+  if (!concepto || !categoria) { alert("Escribe el nombre del gasto y su categoría."); return; }
+  const personas = form.persona.value === "ambos" ? PERSONAS.map((p) => p.id) : [form.persona.value];
+  const g = {
+    id: "x" + Date.now().toString(36),
+    categoria, concepto,
+    tipo: form.tipo.value,
+    frecuencia: form.frecuencia.value,
+    veces: Math.max(0, Number(form.veces.value) || 0),
+    nota: form.nota.value.trim(),
+    personas, propio: true,
+  };
+  estado.extra.push(g);
+  personas.forEach((pid) => (estado.datos[pid][g.id] = { monto: Math.max(0, Number(form.monto.value) || 0), veces: g.veces }));
+  guardar();
+  dialogo.close();
+  if (!PERSONAS.some((p) => p.id === vistaActual)) vistaActual = personas[0];
+  render();
+});
+
+// ---------- Exportar / reiniciar ----------
+document.getElementById("exportar").addEventListener("click", () => {
+  const filas = [["Mes", "Persona", "Tipo", "Categoría", "Concepto", "Frecuencia", "Monto por pago", "Pagos al mes", "Total mensual"]];
+  PERSONAS.forEach((p) => listaDe(p).forEach((g) => {
+    const d = estado.datos[p.id][g.id];
+    filas.push([estado.mes, p.nombre, TIPOS[g.tipo].titulo.split(" (")[0], g.categoria, g.concepto, g.frecuencia, d.monto, d.veces, total(p.id, g.id).toFixed(2)]);
+  }));
+  const csv = "﻿" + filas.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `presupuesto-${estado.mes}.csv`; a.click();
+});
+document.getElementById("reiniciar").addEventListener("click", () => {
+  if (confirm("¿Borrar todos los montos y empezar un mes nuevo? Los gastos que agregaste con + se mantienen.")) {
+    estado = estadoInicial(estado.extra); guardar(); render();
+  }
+});
+document.getElementById("imprimir").addEventListener("click", () => window.print());
+
+
+// ---------- Detectar celular, iPad o computadora ----------
+function detectarDispositivo() {
+  const ancho = Math.min(window.innerWidth, screen.width || window.innerWidth);
+  const tactil = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 1;
+  const esIpad = /iPad/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  let d = "computadora";
+  if (window.innerWidth < 640) d = "celular";
+  else if (esIpad || (tactil && window.innerWidth <= 1366) || window.innerWidth < 1024) d = "ipad";
+  const antes = document.documentElement.dataset.dispositivo;
+  document.documentElement.dataset.dispositivo = d;
+  const nombre = { celular: "📱 Celular", ipad: "📲 iPad / tablet", computadora: "💻 Computadora" }[d];
+  const n = document.getElementById("dispositivo"); if (n) n.textContent = nombre;
+  return antes !== d;
+}
+detectarDispositivo();
+window.addEventListener("resize", detectarDispositivo);
+window.addEventListener("orientationchange", () => setTimeout(detectarDispositivo, 200));
+
+// ---------- Fecha de hoy (se actualiza sola, también a medianoche) ----------
+function mostrarHoy() {
+  const d = new Date();
+  const texto = `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
+  const dia = d.toLocaleDateString("es-PE", { weekday: "long" });
+  const nodo = document.getElementById("hoy");
+  nodo.textContent = `${dia.charAt(0).toUpperCase() + dia.slice(1)} ${texto}`;
+  nodo.title = d.toLocaleDateString("es-PE", { dateStyle: "full" });
+}
+mostrarHoy();
+setInterval(mostrarHoy, 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) mostrarHoy(); });
+
+
+// ---------- Datos compartidos en Firebase (todos ven y editan lo mismo) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyACrKAdlq4o_vQ-aTu9sVZme9H6HCDiz5o",
+  authDomain: "presupuesto-de-la-casa.firebaseapp.com",
+  databaseURL: "https://presupuesto-de-la-casa-default-rtdb.firebaseio.com",
+  projectId: "presupuesto-de-la-casa",
+  storageBucket: "presupuesto-de-la-casa.firebasestorage.app",
+  messagingSenderId: "287891194757",
+  appId: "1:287891194757:web:184c4c040fd15fbbd87aec",
+};
+let rtdb = null;
+const refs = {}, ultimo = {};
+let temporizador = null, cola = Promise.resolve();
+
+const comoLista = (v) => (Array.isArray(v) ? v.filter(Boolean) : v && typeof v === "object" ? Object.values(v) : []);
+function cuerpo(clave) {
+  if (clave === "config") return { mes: estado.mes, extra: estado.extra.map((g) => ({ ...g, personas: [...g.personas] })) };
+  return { datos: estado.datos[clave] || {} };
+}
+function normal(clave, v) {
+  v = v || {};
+  if (clave === "config") return { mes: v.mes || null, extra: comoLista(v.extra).map((g) => ({ ...g, personas: comoLista(g.personas), nota: g.nota || "", propio: true })) };
+  return { datos: v.datos || {} };
+}
+function estadoSync(txt, tipo) {
+  const n = document.getElementById("sync"); if (!n) return;
+  n.textContent = txt; n.dataset.estado = tipo || "";
+}
+function programarSync() {
+  if (!rtdb) return;
+  clearTimeout(temporizador);
+  estadoSync("Guardando…", "guardando");
+  temporizador = setTimeout(() => { cola = cola.then(escribirCambios); }, 700);
+}
+async function escribirCambios() {
+  for (const clave of ["config", ...PERSONAS.map((p) => p.id)]) {
+    const b = cuerpo(clave), s = JSON.stringify(normal(clave, JSON.parse(JSON.stringify(b))));
+    if (s === ultimo[clave]) continue;
+    try { await refs[clave].set(b); ultimo[clave] = s; }
+    catch (e) { estadoSync("No se pudo guardar", "error"); console.error(e); return; }
+  }
+  estadoSync("Guardado para todos", "ok");
+}
+function aplicarRemoto() {
+  asegurarDatos(estado);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); } catch (_) {}
+  const a = document.activeElement;
+  if (a && a.dataset && a.dataset.g) {
+    document.querySelectorAll("#contenido input[data-g]").forEach((i) => {
+      if (i === a) return;
+      const d = estado.datos[i.dataset.p]?.[i.dataset.g]; if (!d) return;
+      const v = i.dataset.k === "monto" ? (d.monto || "") : d.veces;
+      if (String(i.value) !== String(v)) i.value = v;
+    });
+    PERSONAS.forEach((p) => actualizarPersona(p.id));
+  } else if (!document.querySelector("dialog[open]")) {
+    render();
+  }
+}
+function conectar() {
+  if (!window.firebase) { estadoSync("Solo en este dispositivo", "local"); return; }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    rtdb = firebase.database();
+  } catch (e) { console.error(e); estadoSync("Solo en este dispositivo", "local"); return; }
+  refs.config = rtdb.ref("presupuesto/config");
+  PERSONAS.forEach((p) => (refs[p.id] = rtdb.ref("presupuesto/" + p.id)));
+  estadoSync("Conectando…", "guardando");
+  let listos = 0; const total = 1 + PERSONAS.length;
+  const alRecibir = (clave) => (snap) => {
+    const v = snap.val();
+    if (v) {
+      const n = normal(clave, v);
+      ultimo[clave] = JSON.stringify(n);
+      if (clave === "config") { if (n.mes) estado.mes = n.mes; estado.extra = n.extra; }
+      else estado.datos[clave] = JSON.parse(JSON.stringify(n.datos));
+    }
+    if (++listos === total) estadoSync("Compartido", "ok");
+    aplicarRemoto();
+  };
+  const alError = (e) => { console.error(e); estadoSync("Sin permiso para leer datos", "error"); };
+  refs.config.on("value", alRecibir("config"), alError);
+  PERSONAS.forEach((p) => refs[p.id].on("value", alRecibir(p.id), alError));
+  rtdb.ref(".info/connected").on("value", (s) => { if (s.val() === false && listos >= total) estadoSync("Sin internet: se guardará al reconectar", "guardando"); else if (s.val() && listos >= total) estadoSync("Compartido", "ok"); });
+}
+
+render();
+conectar();
+
+</script>
+</body>
+</html>
